@@ -1,119 +1,114 @@
 # rag
 
-Retrieval-augmented detection of AI-generated text.
+**Retrieval-augmented detection of AI-generated text: a hands-on course.**
 
-I fine-tuned ModernBERT to tell human writing apart from machine-generated text using the RAID benchmark, then tested how well it holds up on a different benchmark, MAGE. On top of the classifier I added a simple retrieval step: for each test text, look up its nearest labelled neighbours and blend their vote into the prediction.
+Can a computer tell whether a text was written by a person or by an AI model? This course builds a detector that answers that question in two ways, and then combines them:
 
-The short version: the model is excellent on data that looks like its training set, struggles badly on data that doesn't, and retrieval in its current form only helps a little. I think the reasons are the interesting part, so I've written them up below.
+1. a **classifier** that learns patterns from labelled examples, and
+2. **retrieval**, which finds the most similar texts in a labelled collection and lets them vote.
 
-<a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/rag_ai_text_detection.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
+You'll build every piece yourself, one short lesson at a time, starting from "what is an embedding?" and finishing with a working retrieval-augmented detector tested on real benchmark data. Along the way you'll learn the core skills behind every RAG system (embeddings, vector search, nearest neighbours) and one of the most important lessons in applied machine learning: a model that looks perfect on its own test set can fail on data from somewhere else.
 
-## What's in here
+The course is built on my own experiment in AI-generated text detection. The original full-size version is kept in [`experiments/`](experiments).
 
-```
-rag_ai_text_detection.ipynb   the full pipeline, runs top to bottom in Colab
-figures/                      confusion matrices from the MAGE evaluation
-```
+## Who is this for?
 
-The notebook is self-contained. One of the early cells writes a small `src/` package (config, data loading, modelling, retrieval) into the Colab filesystem, and the rest of the notebook imports from it, so there's nothing else to upload.
+Students and anyone curious about NLP who can read basic Python. No machine-learning background is assumed: every idea is explained before it's used, with small examples you can run and change.
 
-## How it works
+## The lessons
 
-1. **Data.** I take the first 10% of RAID's training split and a random 10% of MAGE's train and test splits. Texts under 50 characters are dropped, and each set is capped and balanced between human and machine as far as the data allows. Labels are 0 for human and 1 for machine throughout. MAGE uses the opposite convention, so its labels are flipped when loading.
-2. **Classifier.** `answerdotai/ModernBERT-base` is fine-tuned for binary classification on RAID, using a stratified 80/10/10 train/validation/test split. The checkpoint with the best validation accuracy is kept.
-3. **Retrieval index.** The fine-tuned encoder embeds the MAGE training texts (mean pooling over tokens, L2-normalised, 768 dimensions). The vectors go into an exact FAISS inner-product index, so search is by cosine similarity.
-4. **Prediction.** For each MAGE test text I find its 7 nearest neighbours, turn their labels into a similarity-weighted "machine" probability, and mix that with the classifier's own probability:
+Each lesson is a Jupyter notebook that runs in Google Colab for free. Click a badge to open it.
 
-   ```
-   final = 0.7 * classifier + 0.3 * retrieval
-   ```
-
-   Anything at 0.5 or above is called machine-generated.
-
-One thing worth being clear about: the retrieval step uses labelled MAGE data, taken from MAGE's train split, which never overlaps its test split. So the retrieval result isn't a zero-shot number. It answers a slightly different question: if you have a pool of labelled examples from a new domain, can you get value out of them at inference time without retraining?
-
-## Data
-
-| Set | Source | Texts |
-|---|---|---|
-| Train | RAID | 35,540 |
-| Validation | RAID | 4,442 |
-| Internal test | RAID | 4,443 |
-| Retrieval corpus | MAGE train | 19,401 (9,401 human, 10,000 machine) |
-| External test | MAGE test | 6,021 (3,044 human, 2,977 machine) |
-
-The RAID sample (44,425 texts) is 19,425 human and 25,000 machine. It isn't fully balanced because human-written texts make up only about 3.5% of the RAID slice I used, so the human side ran out before reaching the cap.
-
-## Results
-
-Single run, seed 42, on a Colab T4. Training took about 52 minutes for two epochs. Precision, recall and F1 treat "machine" as the positive class.
-
-| Evaluation | Accuracy | Precision | Recall | F1 |
+| # | Lesson | You will learn | Runtime | |
 |---|---|---|---|---|
-| RAID internal test | 98.76 | 99.20 | 98.60 | 98.90 |
-| MAGE, classifier only | 53.78 | 51.73 | 97.62 | 67.62 |
-| MAGE, with retrieval | 54.16 | 51.94 | 97.72 | 67.82 |
+| 1 | [What is retrieval-augmented detection?](lessons/01_what_is_retrieval_augmented_detection.ipynb) | the task, classifier vs retrieval, how this relates to RAG, the RAID and MAGE datasets | CPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/01_what_is_retrieval_augmented_detection.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
+| 2 | [Embeddings](lessons/02_embeddings.ipynb) | turning text into vectors, cosine similarity, what happens inside an embedding model | CPU or GPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/02_embeddings.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
+| 3 | [Similarity search](lessons/03_similarity_search.ipynb) | nearest neighbours by brute force and with FAISS, reading a text's neighbours | CPU or GPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/03_similarity_search.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
+| 4 | [Retrieval as a detector](lessons/04_retrieval_as_a_detector.ipynb) | neighbour voting, accuracy / precision / recall / F1, validation vs test sets | CPU or GPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/04_retrieval_as_a_detector.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
+| 5 | [Training a classifier](lessons/05_training_a_classifier.ipynb) | fine-tuning ModernBERT, in-domain vs out-of-domain testing, domain shift | GPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/05_training_a_classifier.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
+| 6 | [Retrieval-augmented detection](lessons/06_retrieval_augmented_detection.ipynb) | blending the two, the decision window, tuning α, comparing embeddings | GPU | <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/lessons/06_retrieval_augmented_detection.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a> |
 
-<p align="center">
-  <img src="figures/confusion_mage_baseline.png" width="45%" alt="MAGE confusion matrix, ModernBERT only">
-  <img src="figures/confusion_mage_rag.png" width="45%" alt="MAGE confusion matrix, retrieval-augmented">
-</p>
+Every lesson ends with **check-your-understanding questions** (answers hidden until you click) and **try-it-yourself exercises**. New terms are collected in the [glossary](GLOSSARY.md).
 
-## What the results are saying
+## How to take the course
 
-**The classifier learned RAID, not AI text in general.** Nearly 99% accuracy on RAID's held-out test set drops to about 54% on MAGE, which is barely better than guessing. The confusion matrices show how it fails. It still catches almost every machine-written MAGE text (2,906 of 2,977), but it also labels 2,712 of the 3,044 human texts as machine. When the writing is unfamiliar, its default answer is "AI".
+**In Google Colab (easiest).** Click a badge above. Run the first code cell ("Setup"): it downloads this repository and installs what's needed. For lessons 5 and 6, switch to a GPU first: *Runtime → Change runtime type → T4 GPU*. The free tier is enough.
 
-**Retrieval helped, but only slightly.** It got a net 23 more texts right (20 human, 3 machine), which is about +0.4 points of accuracy. Some of that ceiling is built into the blend. With a weight of 0.7 on the classifier, even if all seven neighbours say "human", a text only flips to human when the classifier's machine probability is below about 0.71. My guess is that the classifier is much more confident than that on most of the human MAGE texts it gets wrong, so retrieval never really gets a say. I haven't looked at the probability distribution yet, so that's the first thing I want to check.
+**On your own computer.**
 
-**The embeddings probably carry the same bias.** The retrieval vectors come from the model that was fine-tuned on RAID, so the neighbourhoods it builds on MAGE may be organised around RAID-specific cues rather than anything that transfers.
+```bash
+git clone https://github.com/Mary-Vadi/rag.git
+cd rag
+pip install -r requirements.txt
+jupyter lab lessons/
+```
 
-## Running it
+Lessons 5 and 6 fine-tune a transformer model, which really needs a GPU.
 
-1. Open the notebook in Colab with the badge above and switch the runtime to a GPU. A free T4 is enough.
-2. Run the cells from top to bottom. The notebook installs its own dependencies and asks to mount your Google Drive, which is where the outputs are saved.
-3. The first run is slow: `load_dataset("liamdugan/raid")` downloads the full RAID CSVs (around 15 GB) even though only 10% is used.
+Take the lessons in order: each one builds on the ideas of the one before. Datasets and models are downloaded from the Hugging Face Hub the first time you use them.
 
-Outputs end up in `/content/drive/MyDrive/modernbert_raid_mage/outputs/`:
+## The big picture
 
-- `best_model/`: the fine-tuned model and tokenizer
-- `results.csv`: the comparison table above
-- `experiment_summary.json`: config, sample counts and all metrics
+```
+                  ┌───────────────────────────┐
+  new text ──┬──▶ │ classifier (lesson 5)     │ ── P(machine) ──┐
+             │    └───────────────────────────┘                 ▼
+             │    ┌───────────────────────────┐            ┌──────────────┐
+             └──▶ │ retrieval (lessons 2 to 4)│ ── vote ──▶│    blend     │──▶ human or machine
+                  │ similar labelled texts    │            │  (lesson 6)  │
+                  └───────────────────────────┘            └──────────────┘
+```
 
-### Settings
+Both halves produce `P(machine)`, a number between 0 and 1. The final answer is a weighted average of the two, `α × classifier + (1 − α) × retrieval`, and anything at 0.5 or above counts as machine-generated.
 
-Everything is in the `Config` dataclass. The easiest way to change something is to override it straight after `cfg = Config()` in step 5, for example `cfg.rag_alpha = 0.5`.
+### Is this RAG?
 
-| Setting | Default | What it controls |
+Not in the usual sense, and the difference matters. **RAG** (retrieval-augmented *generation*) retrieves documents and gives them to a large language model, which writes an answer. This course keeps the **retrieval** half and replaces generation with a vote, so **no LLM is needed**. The retrieval skills you learn (embeddings, vector indexes, nearest-neighbour search) are exactly the ones every RAG system is built on. Lesson 1 explains the difference in detail, and lesson 6 suggests how to add an LLM on top as a project.
+
+## What's in the repository
+
+```
+lessons/        the six course notebooks
+ragdetect/      the Python code the lessons build and reuse
+tests/          automated tests for ragdetect (run with pytest)
+experiments/    the original full-size experiment and its write-up
+GLOSSARY.md     every technical term used in the course, in plain English
+```
+
+The `ragdetect` package is small and meant to be read. Each module matches a lesson:
+
+| Module | What it does | Lesson |
 |---|---|---|
-| `max_raid_examples` | 50,000 | Cap on the RAID sample. `None` uses the whole 10% slice. |
-| `max_mage_retrieval_examples` | 20,000 | Cap on the retrieval corpus. |
-| `max_mage_test_examples` | 10,000 | Cap on the MAGE test set. |
-| `num_train_epochs` | 2 | Training epochs. |
-| `learning_rate` | 2e-5 | Learning rate. |
-| `max_length` | 512 | Tokens per text. Longer texts are truncated. |
-| `retrieval_k` | 7 | Neighbours per query. |
-| `rag_alpha` | 0.7 | Weight on the classifier in the final blend. |
+| `data.py` | loads RAID and MAGE samples in one common format (0 = human, 1 = machine) | 1 |
+| `embeddings.py` | `Embedder`: text → unit-length vector, with mean pooling | 2 |
+| `retrieval.py` | `NeighbourIndex` (FAISS search) and `RetrievalDetector` (neighbour vote) | 3, 4 |
+| `evaluation.py` | accuracy, precision, recall, F1, confusion matrices | 4 |
+| `classifier.py` | fine-tune a transformer and predict `P(machine)` | 5 |
+| `augment.py` | `blend`, `decision_window` and `tune_alpha` | 6 |
 
-The effective batch size is 16 (8 per device with 2 gradient accumulation steps), with fp16 when a GPU is available.
+## The original experiment in one paragraph
 
-## What I want to try next
+A ModernBERT classifier fine-tuned on RAID scored **98.8%** accuracy on held-out RAID texts but only **53.8%** on MAGE, flagging nearly 9 out of 10 human MAGE texts as AI. Adding retrieval with the blend weight fixed at α = 0.7 raised that to just **54.2%**. The course investigates why (spot checks suggest the training data was almost entirely scientific abstracts, and a confident classifier leaves retrieval very little room to act) and what to do about it. The full write-up is in [`experiments/README.md`](experiments/README.md).
 
-- Tune the blend weight and the decision threshold on a held-out slice of MAGE instead of fixing them at 0.7 and 0.5.
-- Look at the classifier's probabilities and calibrate them, for example with temperature scaling, so retrieval has room to matter.
-- Build the index with a general-purpose sentence encoder instead of the RAID-tuned model.
-- Give closer neighbours more weight. The current weighting uses raw cosine similarities, which tend to be close together, so in practice it behaves almost like a plain majority vote.
-- Sample RAID randomly rather than taking the first 10%, remove the caps, and also evaluate on MAGE's two out-of-distribution test files.
-- Move the `src/` modules out of the notebook into proper files so they can be reused and tested.
+## Running the tests
+
+The tests use tiny, randomly initialised models and made-up data, so they run offline in a few seconds:
+
+```bash
+pip install pytest
+pytest
+```
 
 ## Datasets and model
 
 - **RAID**: Dugan et al., *RAID: A Shared Benchmark for Robust Evaluation of Machine-Generated Text Detectors*, ACL 2024. [liamdugan/raid](https://huggingface.co/datasets/liamdugan/raid)
 - **MAGE**: Li et al., *MAGE: Machine-generated Text Detection in the Wild*, ACL 2024. [yaful/MAGE](https://huggingface.co/datasets/yaful/MAGE)
 - **ModernBERT**: Warner et al., 2024. [answerdotai/ModernBERT-base](https://huggingface.co/answerdotai/ModernBERT-base)
-- **FAISS** for nearest-neighbour search. [facebookresearch/faiss](https://github.com/facebookresearch/faiss)
+- **MiniLM** sentence embeddings: [sentence-transformers/all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)
+- **FAISS** for similarity search: [facebookresearch/faiss](https://github.com/facebookresearch/faiss)
 
 Please check each dataset's licence before reusing it.
 
 ## About
 
-I'm Maryam Vadikheil, an MSc Computer Science student at the University of Salford, working on AI-generated text detection. If you have questions or ideas, feel free to open an issue or reach out on [LinkedIn](https://www.linkedin.com/in/maryam-vadikheil).
+I'm Maryam Vadikheil, an MSc Computer Science student at the University of Salford, working on AI-generated text detection. If something in the course is unclear or broken, please [open an issue](https://github.com/Mary-Vadi/rag/issues). Questions and ideas are welcome too, here or on [LinkedIn](https://www.linkedin.com/in/maryam-vadikheil).
