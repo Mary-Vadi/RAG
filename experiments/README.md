@@ -1,5 +1,5 @@
 # The original experiment
-
+ 
 This folder holds the full-size experiment the course is built on: a ModernBERT classifier trained on RAID, tested on MAGE, with and without a retrieval step on top.
 
 <a href="https://colab.research.google.com/github/Mary-Vadi/rag/blob/main/experiments/original_experiment.ipynb"><img src="https://colab.research.google.com/assets/colab-badge.svg" alt="Open In Colab"/></a>
